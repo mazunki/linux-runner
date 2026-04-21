@@ -1,14 +1,16 @@
 #!/bin/sh
 BINARY=""
-KVM=""
+KVM="@KVM@"
 MEM="@MEM@"
 KERNEL="@KERNEL@"
 CC=""
 CFLAGS=""
+CPU="@CPU@"
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --kvm)    KVM="-enable-kvm -cpu host" ;;
+        --kvm)    KVM="-enable-kvm" ;;
+	--cpu)    CPU="$2"; shift ;;
         --mem)    MEM="$2";    shift ;;
         --kernel) KERNEL="$2"; shift ;;
         --cc)     CC="$2";     shift ;;
@@ -37,5 +39,5 @@ exec @QEMU@ \
     -serial stdio \
     -monitor none \
     -no-reboot \
-    $KVM \
+    $KVM ${CPU:+-cpu $CPU} \
     -append 'console=ttyS0 rdinit=/sbin/init root=/dev/ram0 rw quiet'

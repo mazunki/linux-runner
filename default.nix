@@ -2,6 +2,7 @@
 , stdenv
 , kernel ? pkgs.linux
 , mem ? "4G"
+, kvm ? false
 }:
 
 let
@@ -33,6 +34,8 @@ stdenv.mkDerivation {
       --subst-var-by MKINITRD $out/bin/mkInitrd \
       --subst-var-by QEMU     ${pkgs.qemu}/bin/qemu-system-x86_64 \
       --subst-var-by KERNEL   ${kernel}/bzImage \
-      --subst-var-by MEM      ${mem}
+      --subst-var-by MEM      ${mem} \
+      --subst-var-by KVM      "${if kvm then "-enable-kvm" else ""}" \
+      --subst-var-by CPU      "${if kvm then "kvm64,+rdrand,+rdseed" else ""}"
   '';
 }
