@@ -1,0 +1,52 @@
+#!/bin/sh
+# Compile (if .c) and pack a static binary into a cpio initrd, written to stdout.
+
+BINARY=""
+CC="@CC@"
+CFLAGS="@CFLAGS@"
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --cc)     CC="$2";     shift ;;
+        --cflags) CFLAGS="$2"; shift ;;
+        -*)       echo "mkInitrd: unknown flag: $1" >&2; exit 1 ;;
+        *)        BINARY="$1" ;;
+    esac
+    shift
+done
+
+[ -z "$BINARY" ] && { echo "usage: mkInitrd [--cc CC] [--cflags FLAGS] BINARY|FILE.c" >&2; exit 1; }
+
+BUILD=$(mktemp -d)
+TMP=$(mktemp -d)
+trap 'rm -rf "$BUILD" "$TMP"' EXIT
+
+case "$BINARY" in
+    *.c)
+        $CC $CFLAGS "$BINARY" -o "$BUILD/compiled" >&2
+        BINARY="$BUILD/compiled"
+        ;;
+esac
+
+[ -x "$BINARY" ] || { echo "mkInitrd: not executable: $BINARY" >&2; exit 1; }
+
+mkdir -p "$TMP"/{bin,sbin,proc,sys}
+
+cp @BUSYBOX@ "$TMP/bin/busybox"
+ln -s busybox "$TMP/bin/sh"
+ln -s busybox "$TMP/bin/mount"
+ln -s /bin/busybox "$TMP/sbin/poweroff"
+
+cp "$BINARY" "$TMP/bin/app"
+chmod +x "$TMP/bin/app"
+
+cat > "$TMP/sbin/init" <<'INIT'
+#!/bin/sh
+mount -t proc none /proc
+mount -t sysfs none /sys
+/bin/app
+poweroff -f
+INIT
+chmod +x "$TMP/sbin/init"
+
+(cd "$TMP" && find . -print | @CPIO@ -o -H newc 2>/dev/null)
