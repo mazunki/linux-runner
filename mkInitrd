@@ -1,34 +1,21 @@
 #!/bin/sh
-# Compile (if .c) and pack a static binary into a cpio initrd, written to stdout.
-
+# packs a static binary into a cpio initrd, written to stdout
 BINARY=""
-CC="@CC@"
-CFLAGS="@CFLAGS@"
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --cc)     CC="$2";     shift ;;
-        --cflags) CFLAGS="$2"; shift ;;
         -*)       echo "mkInitrd: unknown flag: $1" >&2; exit 1 ;;
         *)        BINARY="$1" ;;
     esac
     shift
 done
 
-[ -z "$BINARY" ] && { echo "usage: mkInitrd [--cc CC] [--cflags FLAGS] BINARY|FILE.c" >&2; exit 1; }
+[ -z "$BINARY" ] && { echo "usage: mkInitrd <static ELF executable>" >&2; exit 1; }
+[ -x "$BINARY" ] || { echo "mkInitrd: not executable: $BINARY" >&2; exit 1; }
 
 BUILD=$(mktemp -d)
 TMP=$(mktemp -d)
 trap 'rm -rf "$BUILD" "$TMP"' EXIT
-
-case "$BINARY" in
-    *.c)
-        $CC $CFLAGS "$BINARY" -o "$BUILD/compiled" >&2
-        BINARY="$BUILD/compiled"
-        ;;
-esac
-
-[ -x "$BINARY" ] || { echo "mkInitrd: not executable: $BINARY" >&2; exit 1; }
 
 mkdir -p "$TMP"/{bin,sbin,proc,sys}
 

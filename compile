@@ -1,0 +1,23 @@
+#!/bin/sh
+# Compile source files into a static binary, written to path printed on stdout.
+OUT=""
+COMPILER="@COMPILER@"
+CFLAGS="@CFLAGS@"
+SOURCES=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --compiler) COMPILER="$2"; shift ;;
+        --cflags)   CFLAGS="$2";   shift ;;
+        --out)      OUT="$2";      shift ;;
+        -*)         echo "compile: unknown flag: $1" >&2; exit 1 ;;
+        *)          SOURCES="$SOURCES $1" ;;
+    esac
+    shift
+done
+
+[ -z "$SOURCES" ] && { echo "usage: compile [--compiler CC] [--cflags FLAGS] [--out BINARY] SOURCE..." >&2; exit 1; }
+[ -z "$OUT" ] && OUT=$(mktemp)
+
+$COMPILER $CFLAGS $SOURCES -o "$OUT" >&2
+echo "$OUT"

@@ -20,13 +20,16 @@ stdenv.mkDerivation {
   dontBuild = true;
 
   installPhase = ''
+    install -D compile $out/bin/compile
+    substituteInPlace $out/bin/compile \
+      --subst-var-by COMPILER ${stdenv.cc}/bin/cc \
+      --subst-var-by CFLAGS   "-O2 -static -rtlib=compiler-rt"
+
     install -D mkInitrd $out/bin/mkInitrd
 
     substituteInPlace $out/bin/mkInitrd \
       --subst-var-by BUSYBOX ${busybox}/bin/busybox \
       --subst-var-by CPIO    ${pkgs.cpio}/bin/cpio \
-      --subst-var-by CC      ${stdenv.cc}/bin/cc \
-      --subst-var-by CFLAGS  "-O2 -static -rtlib=compiler-rt"
 
     install -D boot $out/bin/boot
 
@@ -36,6 +39,7 @@ stdenv.mkDerivation {
       --subst-var-by KERNEL   ${kernel}/bzImage \
       --subst-var-by MEM      ${mem} \
       --subst-var-by KVM      "${if kvm then "-enable-kvm" else ""}" \
-      --subst-var-by CPU      "${if kvm then "kvm64,+rdrand,+rdseed" else ""}"
+      --subst-var-by CPU      "${if kvm then "kvm64,+rdrand,+rdseed" else ""}" \
+      --subst-var-by COMPILE  $out/bin/compile
   '';
 }
