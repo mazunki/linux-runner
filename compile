@@ -16,8 +16,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-[ -z "$SOURCES" ] && { echo "usage: compile [--compiler CC] [--cflags FLAGS] [--out BINARY] SOURCE..." >&2; exit 1; }
 [ -z "$OUT" ] && OUT=$(mktemp)
+[ -z "$SOURCES" ] && SOURCES="main.c"
 
 $COMPILER $CFLAGS $SOURCES -o "$OUT" >&2
 echo "$OUT"

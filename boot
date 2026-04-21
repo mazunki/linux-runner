@@ -23,6 +23,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+[ -z "$SOURCES" ] && [ -z "$BINARY" ] && SOURCES="main.c"
+
 if [ -n "$SOURCES" ]; then
     BINARY=$(@COMPILE@ ${CC:+--cc "$CC"} ${CFLAGS:+--cflags "$CFLAGS"} $SOURCES)
 elif [ -z "$BINARY" ]; then
