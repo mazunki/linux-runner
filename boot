@@ -10,15 +10,15 @@ CPU="@CPU@"
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --kvm)    KVM="-enable-kvm" ;;
-        --cpu)    CPU="$2"; shift ;;
-        --mem)    MEM="$2"; shift ;;
-        --kernel) KERNEL="$2"; shift ;;
-        --cc)     CC="$2"; shift ;;
-        --cflags) CFLAGS="$2"; shift ;;
-        -*)       echo "boot: unknown flag: $1" >&2; exit 1 ;;
-        *.c)      SOURCES="$SOURCES $1" ;;
-        *)        BINARY="$1" ;;
+        --kvm)      KVM="-enable-kvm" ;;
+        --cpu)      CPU="$2"; shift ;;
+        --mem)      MEM="$2"; shift ;;
+        --kernel)   KERNEL="$2"; shift ;;
+        --compiler) CC="$2"; shift ;;
+        --cflags)   CFLAGS="$2"; shift ;;
+        -*)         echo "boot: unknown flag: $1" >&2; exit 1 ;;
+        *.c)        SOURCES="$SOURCES $1" ;;
+        *)          BINARY="$1" ;;
     esac
     shift
 done
@@ -26,9 +26,9 @@ done
 [ -z "$SOURCES" ] && [ -z "$BINARY" ] && SOURCES="main.c"
 
 if [ -n "$SOURCES" ]; then
-    BINARY=$(@COMPILE@ ${CC:+--cc "$CC"} ${CFLAGS:+--cflags "$CFLAGS"} $SOURCES)
+    BINARY=$(@COMPILE@ ${CC:+--compiler "$CC"} ${CFLAGS:+--cflags "$CFLAGS"} $SOURCES)
 elif [ -z "$BINARY" ]; then
-    echo "usage: boot [--kvm] [--mem SIZE] [--kernel PATH] [--cc CC] [--cflags FLAGS] BINARY|FILE.c..." >&2
+    echo "usage: boot [--kvm] [--mem SIZE] [--kernel PATH] [--compiler CC] [--cflags FLAGS] BINARY|FILE.c..." >&2
     exit 1
 fi
 
