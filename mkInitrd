@@ -17,7 +17,7 @@ BUILD=$(mktemp -d)
 TMP=$(mktemp -d)
 trap 'rm -rf "$BUILD" "$TMP"' EXIT
 
-mkdir -p "$TMP"/{bin,sbin,proc,sys}
+mkdir -p "$TMP/bin" "$TMP/sbin" "$TMP/proc" "$TMP/sys"
 
 cp @BUSYBOX@ "$TMP/bin/busybox"
 ln -s busybox "$TMP/bin/sh"
