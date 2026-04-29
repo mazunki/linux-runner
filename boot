@@ -8,6 +8,7 @@ CC=""
 CFLAGS=""
 CPU="@CPU@"
 DEBUG="@DEBUG@"
+VERBOSE="@VERBOSE@"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -18,6 +19,7 @@ while [ $# -gt 0 ]; do
         --compiler) CC="$2"; shift ;;
         --cflags)   CFLAGS="$2"; shift ;;
         --debug)    DEBUG="true"; ;;
+        --verbose)  VERBOSE="true"; ;;
         -*)         echo "boot: unknown flag: $1" >&2; exit 1 ;;
         *.c)        SOURCES="$SOURCES $1" ;;
         *)          BINARY="$1" ;;
@@ -39,7 +41,10 @@ trap 'rm -f "$INITRD"' EXIT
 
 @MKINITRD@ "$BINARY" > "$INITRD"
 
-echo "$BINARY"
+if [ "${VERBOSE}" = true ]; then
+    echo "elf: $BINARY"
+    echo "cpio: $INITRD"
+fi
 
 exec @QEMU@ \
     -kernel "$KERNEL" \
