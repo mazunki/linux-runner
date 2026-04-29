@@ -46,6 +46,12 @@ if [ "${VERBOSE}" = true ]; then
     echo "cpio: $INITRD"
 fi
 
+if [ -n "${BINARY}" ]; then
+    echo "couldn't find binary" >&2
+elif [ -n "${INITRD}" ]; then
+    echo "couldn't find cpio" >&2
+fi
+
 exec @QEMU@ \
     -kernel "$KERNEL" \
     -initrd "$INITRD" \
