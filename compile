@@ -2,7 +2,7 @@
 OUT=""
 COMPILER="@COMPILER@"
 CFLAGS="@CFLAGS@"
-SFLAGS="@SFLAGS@"  # static build flags
+SFLAGS="@SFLAGS@"  # internal flags
 DEBUGFLAGS="@DEBUGFLAGS@"
 SOURCES=""
 
@@ -20,6 +20,40 @@ done
 [ -z "$OUT" ] && OUT=$(mktemp)
 [ -z "$SOURCES" ] && SOURCES="main.c"
 
-$COMPILER $CFLAGS $SFLAGS $DEBUGFLAGS $SOURCES -o "$OUT" >&2
-echo "$OUT"
+# Detect language
+LANG="c"
+for f in $SOURCES; do
+    case "$f" in
+        *.cpp|*.cc|*.cxx) LANG="cpp" ;;
+        *.zig)            LANG="zig" ;;
+    esac
+done
 
+# Default compiler
+case "$COMPILER" in
+    ""|"@COMPILER@")
+        case "$LANG" in
+            cpp) COMPILER="c++" ;;
+            zig) COMPILER="zig build-exe" ;;
+            *)   COMPILER="cc" ;;
+        esac
+        ;;
+esac
+
+compile_c_like() {
+    set -- $CFLAGS $SFLAGS $DEBUGFLAGS $SOURCES -o "$OUT"
+    set -f
+    exec $COMPILER "$@"
+}
+
+compile_zig() {
+    # SFLAGS is still "internal correctness flags"
+    set -- $SOURCES $DEBUGFLAGS $SFLAGS -femit-bin="$OUT"
+    set -f
+    exec $COMPILER "$@"
+}
+
+case "$LANG" in
+    zig) compile_zig ;;
+    *)   compile_c_like ;;
+esac
