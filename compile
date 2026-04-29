@@ -1,8 +1,9 @@
 #!/bin/sh
-# Compile source files into a static binary, written to path printed on stdout.
 OUT=""
 COMPILER="@COMPILER@"
 CFLAGS="@CFLAGS@"
+SFLAGS="@SFLAGS@"  # static build flags
+DEBUGFLAGS="@DEBUGFLAGS@"
 SOURCES=""
 
 while [ $# -gt 0 ]; do
@@ -19,5 +20,6 @@ done
 [ -z "$OUT" ] && OUT=$(mktemp)
 [ -z "$SOURCES" ] && SOURCES="main.c"
 
-$COMPILER $CFLAGS $SOURCES -o "$OUT" >&2
+$COMPILER $CFLAGS $SFLAGS $DEBUGFLAGS $SOURCES -o "$OUT" >&2
 echo "$OUT"
+

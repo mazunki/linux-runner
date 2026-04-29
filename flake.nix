@@ -23,6 +23,20 @@
       pkgs.callPackage ./default.nix (args // {
         inherit pkgs stdenv;
       });
+
+    boot = args: {
+      type = "app";
+      program = "${mkRunner args}/bin/boot";
+    };
+
+    mkBoot = args:
+      let
+        tcg = boot { kvm = false; };
+        kvm = boot { kvm = true; };
+        debug = boot { debug = true; };
+      in
+        tcg // { inherit kvm debug tcg; };
+
   in
   {
     packages.${system}.default = runner;
@@ -35,11 +49,7 @@
 
     # for downstream flakes
     lib.${system} = {
-      inherit mkRunner;
-      mkBoot = args: {
-        type = "app";
-        program = "${mkRunner args}/bin/boot";
-      };
+      inherit mkRunner mkBoot;
       mkInitrd = args: {
         type = "app";
         program = "${mkRunner args}/bin/mkInitrd";

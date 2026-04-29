@@ -3,6 +3,7 @@
 , kernel ? pkgs.linux
 , mem ? "4G"
 , kvm ? false
+, debug ? false
 }:
 
 let
@@ -23,7 +24,9 @@ stdenv.mkDerivation {
     install -D compile $out/bin/compile
     substituteInPlace $out/bin/compile \
       --subst-var-by COMPILER ${stdenv.cc}/bin/cc \
-      --subst-var-by CFLAGS   "-O2 -static -rtlib=compiler-rt"
+      --subst-var-by SFLAGS   "-static -rtlib=compiler-rt" \
+      --subst-var-by CFLAGS   "-O2" \
+      --subst-var-by DEBUGFLAGS "${if debug then "-ggdb3" else ""}"
 
     install -D mkInitrd $out/bin/mkInitrd
 
@@ -40,6 +43,7 @@ stdenv.mkDerivation {
       --subst-var-by MEM      ${mem} \
       --subst-var-by KVM      "${if kvm then "-enable-kvm" else ""}" \
       --subst-var-by CPU      "${if kvm then "kvm64,+rdrand,+rdseed" else ""}" \
-      --subst-var-by COMPILE  $out/bin/compile
+      --subst-var-by COMPILE  $out/bin/compile \
+      --subst-var-by DEBUG    "${if debug then "true" else ""}"
   '';
 }

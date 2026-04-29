@@ -7,6 +7,7 @@ KERNEL="@KERNEL@"
 CC=""
 CFLAGS=""
 CPU="@CPU@"
+DEBUG="@DEBUG@"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -16,6 +17,7 @@ while [ $# -gt 0 ]; do
         --kernel)   KERNEL="$2"; shift ;;
         --compiler) CC="$2"; shift ;;
         --cflags)   CFLAGS="$2"; shift ;;
+        --debug)    DEBUG="true"; ;;
         -*)         echo "boot: unknown flag: $1" >&2; exit 1 ;;
         *.c)        SOURCES="$SOURCES $1" ;;
         *)          BINARY="$1" ;;
@@ -28,7 +30,7 @@ done
 if [ -n "$SOURCES" ]; then
     BINARY=$(@COMPILE@ ${CC:+--compiler "$CC"} ${CFLAGS:+--cflags "$CFLAGS"} $SOURCES)
 elif [ -z "$BINARY" ]; then
-    echo "usage: boot [--kvm] [--mem SIZE] [--kernel PATH] [--compiler CC] [--cflags FLAGS] BINARY|FILE.c..." >&2
+    echo "usage: boot [--kvm] [--mem SIZE] [--kernel PATH] [--compiler CC] [--cflags FLAGS] [--debug] BINARY|FILE.c..." >&2
     exit 1
 fi
 
@@ -36,6 +38,8 @@ INITRD=$(mktemp --suffix=.cpio)
 trap 'rm -f "$INITRD"' EXIT
 
 @MKINITRD@ "$BINARY" > "$INITRD"
+
+echo "$BINARY"
 
 exec @QEMU@ \
     -kernel "$KERNEL" \
@@ -45,6 +49,6 @@ exec @QEMU@ \
     -serial stdio \
     -monitor none \
     -no-reboot \
-    $KVM ${CPU:+-cpu $CPU} \
+    $KVM ${CPU:+-cpu $CPU} ${DEBUG:+-s -S} \
     -append 'console=ttyS0 rdinit=/sbin/init root=/dev/ram0 rw quiet'
 
