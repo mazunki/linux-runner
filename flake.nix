@@ -15,6 +15,15 @@
 
     mkRunner = args: pkgs.callPackage ./default.nix (args // { inherit pkgs; });
 
+    shell = pkgs.symlinkJoin {
+      name = "linux-runner-shell";
+      paths = [
+        runner
+        compiler.packages.${system}.shell
+        pkgs.qemu
+      ];
+    };
+
     boot = args: {
       type = "app";
       program = "${mkRunner args}/bin/boot";
@@ -30,7 +39,7 @@
 
   in
   {
-    packages.${system}.default = runner;
+    packages.${system} = { default = shell; inherit runner shell; };
 
     apps.${system} = {
       default  = { type = "app"; program = "${runner}/bin/boot"; };
@@ -39,10 +48,7 @@
     };
 
     devShells.${system}.default = pkgs.mkShell {
-      packages = [
-        runner
-        compiler.packages.${system}.compile
-      ];
+      packages = [ shell ];
     };
 
     # for downstream flakes
