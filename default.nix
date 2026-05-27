@@ -23,6 +23,8 @@ pkgs.stdenv.mkDerivation {
       --subst-var-by BUSYBOX ${busybox}/bin/busybox \
       --subst-var-by CPIO    ${pkgs.cpio}/bin/cpio
 
+    install -D command.py $out/bin/command.py
+
     install -D boot $out/bin/boot
     substituteInPlace $out/bin/boot \
       --replace-fail "#!/usr/bin/env python3" "#!${pkgs.python3}/bin/python3" \
