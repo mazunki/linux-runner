@@ -1,65 +1,79 @@
-#!/bin/sh
-BINARY=""
-SOURCES=""
-KVM="@KVM@"
-MEM="@MEM@"
-KERNEL="@KERNEL@"
-CC=""
-CFLAGS=""
-CPU="@CPU@"
-DEBUG="@DEBUG@"
-VERBOSE="@VERBOSE@"
+#!/usr/bin/env python3
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
-while [ $# -gt 0 ]; do
-    case "$1" in
-        --kvm)      KVM="-enable-kvm" ;;
-        --cpu)      CPU="$2"; shift ;;
-        --mem)      MEM="$2"; shift ;;
-        --kernel)   KERNEL="$2"; shift ;;
-        --compiler) CC="$2"; shift ;;
-        --cflags)   CFLAGS="$2"; shift ;;
-        --debug)    DEBUG="true"; ;;
-        --verbose)  VERBOSE="true"; ;;
-        -*)         echo "boot: unknown flag: $1" >&2; exit 1 ;;
-        *.c)        SOURCES="$SOURCES $1" ;;
-        *)          BINARY="$1" ;;
-    esac
-    shift
-done
+QEMU     = "@QEMU@"
+KERNEL   = "@KERNEL@"
+MKINITRD = "@MKINITRD@"
+MEM      = "@MEM@"
+KVM      = "@KVM@"    # "-enable-kvm" or ""
+CPU      = "@CPU@"    # "kvm64,+rdrand,+rdseed" or ""
+DEBUG    = "@DEBUG@"  # "true" or ""
 
-[ -z "$SOURCES" ] && [ -z "$BINARY" ] && SOURCES="main.c"
 
-if [ -n "$SOURCES" ]; then
-    BINARY=$(@COMPILE@ ${CC:+--compiler "$CC"} ${CFLAGS:+--cflags "$CFLAGS"} $SOURCES)
-elif [ -z "$BINARY" ]; then
-    echo "usage: boot [--kvm] [--mem SIZE] [--kernel PATH] [--compiler CC] [--cflags FLAGS] [--debug] BINARY|FILE.c..." >&2
-    exit 1
-fi
+def boot(binary: Path, mem: str, kvm: bool, cpu: str, kernel: str, debug: bool, verbose: bool):
+    fd, initrd = tempfile.mkstemp(suffix=".cpio")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            subprocess.run([MKINITRD, str(binary)], stdout=f, check=True)
 
-INITRD=$(mktemp --suffix=.cpio)
-trap 'rm -f "$INITRD"' EXIT
+        if verbose:
+            print(f"elf: {binary}", file=sys.stderr)
+            print(f"cpio: {initrd}", file=sys.stderr)
 
-@MKINITRD@ "$BINARY" > "$INITRD"
+        cmd = [
+            QEMU,
+            "-kernel", kernel,
+            "-initrd", initrd,
+            "-m", mem,
+            "-display", "none",
+            "-serial", "stdio",
+            "-monitor", "none",
+            "-no-reboot",
+        ]
 
-if [ "${VERBOSE}" = true ]; then
-    echo "elf: $BINARY"
-    echo "cpio: $INITRD"
-fi
+        if kvm:
+            cmd.append("-enable-kvm")
+        if cpu:
+            cmd += ["-cpu", cpu]
+        if debug:
+            cmd += ["-s", "-S"]
 
-if [ -n "${BINARY}" ]; then
-    echo "couldn't find binary" >&2
-elif [ -n "${INITRD}" ]; then
-    echo "couldn't find cpio" >&2
-fi
+        cmd += ["-append", "console=ttyS0 rdinit=/sbin/init root=/dev/ram0 rw quiet"]
 
-exec @QEMU@ \
-    -kernel "$KERNEL" \
-    -initrd "$INITRD" \
-    -m "$MEM" \
-    -display none \
-    -serial stdio \
-    -monitor none \
-    -no-reboot \
-    $KVM ${CPU:+-cpu $CPU} ${DEBUG:+-s -S} \
-    -append 'console=ttyS0 rdinit=/sbin/init root=/dev/ram0 rw quiet'
+        result = subprocess.run(cmd)
+    finally:
+        os.unlink(initrd)
 
+    sys.exit(result.returncode)
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="boot")
+    parser.add_argument("binary", type=Path)
+    parser.add_argument("--mem", default=MEM)
+    parser.add_argument("--kernel", default=KERNEL)
+    parser.add_argument("--kvm", dest="kvm", action="store_true", default=bool(KVM))
+    parser.add_argument("--no-kvm", dest="kvm", action="store_false")
+    parser.add_argument("--cpu", default=CPU or None)
+    parser.add_argument("--debug", action="store_true", default=(DEBUG == "true"))
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args()
+
+    boot(
+        binary=args.binary,
+        mem=args.mem,
+        kvm=args.kvm,
+        cpu=args.cpu or "",
+        kernel=args.kernel,
+        debug=args.debug,
+        verbose=args.verbose,
+    )
+
+
+if __name__ == "__main__":
+    main()

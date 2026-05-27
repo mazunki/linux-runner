@@ -1,28 +1,19 @@
 {
   description = "run your application over qemu with linux";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/25.05";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/25.05";
+    compiler.url = "github:mazunki/compiler";
+  };
 
-  outputs = { self, nixpkgs }:
- let
+  outputs = { self, nixpkgs, compiler }:
+  let
     system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
 
-    pkgs = import nixpkgs {
-      inherit system;
-      overlays = [ (import ./toolchain.nix {}) ];
-    };
+    runner = pkgs.callPackage ./default.nix { inherit pkgs; };
 
-    stdenv = pkgs.toolchain.stdenv';
-
-    runner = pkgs.callPackage ./default.nix {
-      inherit pkgs;
-      inherit stdenv;
-    };
-
-    mkRunner = args:
-      pkgs.callPackage ./default.nix (args // {
-        inherit pkgs stdenv;
-      });
+    mkRunner = args: pkgs.callPackage ./default.nix (args // { inherit pkgs; });
 
     boot = args: {
       type = "app";
@@ -31,11 +22,11 @@
 
     mkBoot = args:
       let
-        tcg = boot { kvm = false; };
-        kvm = boot { kvm = true; };
+        tcg   = boot { kvm = false; };
+        kvm   = boot { kvm = true; };
         debug = boot { debug = true; };
       in
-        tcg // { inherit kvm debug tcg; };
+        kvm // { inherit kvm debug tcg; };
 
   in
   {
@@ -45,6 +36,13 @@
       default  = { type = "app"; program = "${runner}/bin/boot"; };
       boot     = { type = "app"; program = "${runner}/bin/boot"; };
       mkInitrd = { type = "app"; program = "${runner}/bin/mkInitrd"; };
+    };
+
+    devShells.${system}.default = pkgs.mkShell {
+      packages = [
+        runner
+        compiler.packages.${system}.compile
+      ];
     };
 
     # for downstream flakes
